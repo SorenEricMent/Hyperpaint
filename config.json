@@ -1,0 +1,12 @@
+{
+	"offset":[
+		0,0
+	],
+	"account":[
+		"__client_id=Example1;_uid=Example1;",
+		"__client_id=Example2;_uid=Example2;"
+	],
+	"pattern":[
+		[0,0,0],[0,1,1]
+	]
+}
