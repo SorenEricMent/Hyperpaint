@@ -1,4 +1,4 @@
-console.log('\x1B[36m%s\x1b[0m',"HyperPaint V1.0 - A powerful Luogu Painter Script");
+console.log('\x1B[36m%s\x1b[0m',"HyperPaint V1.1 - A powerful Luogu Painter Script");
 console.log('\x1B[35m%s\x1b[0m',"By WinslowEric.CN");
 var pixelPool = [];
 var patternPool;
@@ -7,12 +7,13 @@ var drawingPool = [];
 var paintBoardResp;
 var paintConfig;
 var currentMap = [];
+var verboseLevel;
+var loopCount = 0;
 var drawpointIndex,currentDrawpoint;
 var dateObj = new Date();
 var offset;
-var loopCount = 0,pointCount = 0;
 var currentAccountIndex,currentAccount;
-var userAgent = "NodeJS HyperPaint/V1.0 (By WinslowEric.CN)";
+var userAgent = "NodeJS HyperPaint/V1.1 (By WinslowEric.CN)";
 var __EnableLogging__ = true;//false禁用log输出
 const fs = require("fs");
 if(!moduleAvailable("needle")){
@@ -68,18 +69,26 @@ function getLogTime(){
 }
 
 async function mainControlProcess(){
+	verboseLevel = paintConfig.verbose;
+	if(verboseLevel > 3){
+		verboseLevel = 3;
+		console.log("日志最高琐碎度为3")
+	}
 	accountPool = paintConfig.account;
 	patternPool = paintConfig.pattern;
 	offset = paintConfig.offset;
 	var requestLoop = setInterval(async function(){
-		pointCount = 0;
+		let pointCount = 0;
 		if(accountPool.length != 0){
 			loopCount++;
-			await needle.request('GET', 'https://www.luogu.com.cn/paintBoard/board',{},{},
+			let currentCount = loopCount;
+			await needle.request('GET', 'https://www.luogu.com.cn/paintboard/board',{},{},
 			function(error, response) {
 				if (!error && response.statusCode === 200) {
 					paintBoardResp = response.body;
-					var mapTemp = paintBoardResp.split("\n");
+					try{var mapTemp = paintBoardResp.split("\n");}catch(e){if(verboseLevel>=1){console.log("画板信息获取错误！获取到的数据:"+paintBoardResp);}
+					}
+					
 					for(var i=0;i<1000;i++){
 						currentMap[i] = [];
 						for(var j=0;j<600;j++){
@@ -126,16 +135,18 @@ async function mainControlProcess(){
 				}else{
 					console.log('\x1B[31m%s\x1b[0m',getLogTime()+"获取画板信息失败！");
 				}
-				console.log('\x1B[36m%s\x1b[0m',getLogTime()+"完成第"+loopCount+"次画板检查,画点数量:"+pointCount);
+				console.log('\x1B[36m%s\x1b[0m',getLogTime()+"完成第"+currentCount+"次画板检查,画点数量:"+pointCount);
 				});
 			}else{
 				console.log('\x1B[36m%s\x1b[0m',getLogTime()+"池内无可用账号，跳过检查");
 			}
-	},5000);
+	},1500);
 }
 
 function drawRequest(x,y,color,cookie){
-	needle.request('POST', 'https://www.luogu.com.cn/paintBoard/paint',{
+	if(accountPool.indexOf(cookie) != -1){
+		accountPool.remove(cookie);
+		needle.request('POST', 'https://www.luogu.com.cn/paintboard/paint?token='+cookie,{
 		"x" : x,
 		"y" : y,
 		"color" : color
@@ -148,22 +159,29 @@ function drawRequest(x,y,color,cookie){
 			"Accept-Encoding" : "gzip, deflate, br",
 			"Connection" : "keep-alive",
 			"Referer" : "https://www.luogu.com.cn/",
-			"Cache-Control" : "no-cache",
-			"Cookie" : cookie
+			"Cache-Control" : "no-cache"
 		}
 	},function(error, response) {
 		if (!error && response.statusCode === 200) {
-			accountPool.remove(cookie);
-			console.log("将"+cookie+"加入冷却池");
 			addAccountQueue(cookie);
+			if(verboseLevel == 3){
+				console.log("在"+x+","+y+"绘制点"+color);
+				console.log("将"+cookie+"加入冷却池");
+			}
 		}else{
-			console.log('\x1B[31m%s\x1b[0m',getLogTime()+"画点失败！");
+			accountPool.push(cookie);
+			console.log('\x1B[31m%s\x1b[0m',getLogTime()+"画点失败！失败账号信息:"+cookie);
 		}
 	});
+	}else{
+		if(verboseLevel == 3){
+			console.log("Account lock conflict.");
+		}
+	}
 }
 function addAccountQueue(cooldownAccount){
 	setTimeout(function(){
-		accountPool[accountPool.length] = cooldownAccount;	
+		accountPool.push(cooldownAccount);	
 	},30000);
 }
 
