@@ -15,6 +15,7 @@ var offset;
 var currentAccountIndex,currentAccount;
 var userAgent = "NodeJS HyperPaint/V1.1 (By WinslowEric.CN)";
 var __EnableLogging__ = true;//false禁用log输出
+var occupyMode = false; //抢占模式
 const fs = require("fs");
 if(!moduleAvailable("needle")){
 	console.log('\x1B[31m%s\x1b[0m',"请在本程序根目录下运行npm install needle安装needle模块！");
@@ -169,8 +170,12 @@ function drawRequest(x,y,color,cookie){
 				console.log("将"+cookie+"加入冷却池");
 			}
 		}else{
-			accountPool.push(cookie);
-			console.log('\x1B[31m%s\x1b[0m',getLogTime()+"画点失败！失败账号信息:"+cookie);
+			if(occupyMode){
+				accountPool.push(cookie);
+				console.log('\x1B[31m%s\x1b[0m',getLogTime()+"画点失败！失败账号信息:"+cookie);
+			}else{
+				console.log('\x1B[31m%s\x1b[0m',getLogTime()+"画点失败！失败账号信息:"+cookie);
+			}
 		}
 	});
 	}else{
